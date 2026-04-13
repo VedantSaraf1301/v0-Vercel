@@ -1,12 +1,12 @@
 "use server";
 
 import db from "@/lib/db";
-import { currentUser } from "@clerk/nextjs/server";
+import { currentUser as getClerkUser} from "@clerk/nextjs/server";
 import { success } from "zod";
 
 export const onBoardUser = async () => {
   try {
-    const user = await currentUser();
+    const user = await getClerkUser();
 
     if (!user) {
       return {
@@ -56,7 +56,7 @@ export const onBoardUser = async () => {
 
 export const getCurrentUser = async () => {
   try {
-    const user = await currentUser();
+    const user = await getClerkUser();
     if (!user) {
       return {
         success: false,

@@ -11,9 +11,13 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter } from "next/navigation";
 
+
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Form, FormField } from "@/components/ui/form";
+import { onInvoke } from "../actions";
+import { useCreateProject } from "@/modules/projects/hooks/project";
 
 const formSchema = z.object({
   content: z
@@ -77,6 +81,8 @@ const ProjectForm = () => {
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
 
+  const {mutateAsync,isPending} = useCreateProject()
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -91,13 +97,23 @@ const ProjectForm = () => {
 
   const onSubmit = async (values) => {
     try {
-      console.log(values);
-    } catch (error) {}
+      const res = await mutateAsync(values.content)
+      router.push(`/projects/${res.id}`)
+      toast.success("Project Created Successfully")
+      form.reset()
+    } catch (error) {
+      toast.error(error.message || "Failed to create project")
+    }
   };
+
+  const isButtonDisabled = isPending || !form.watch("content").trim()
+
 
   return (
     <div className="space-y-8">
       {/*Template Grid*/}
+
+     
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {templates.map((template, index) => (
           <button
@@ -171,10 +187,14 @@ const ProjectForm = () => {
               &nbsp; to submit
             </div>
             <Button
-              className={cn("size-8 rounded-full")}
+              className={cn("size-8 rounded-full",isButtonDisabled && "bg-muted-foreground border")}
+              disabled={isButtonDisabled}
               type="submit"
             >
-                <ArrowUpIcon/>
+              {
+                isPending ? (<Spinner/>) : (<ArrowUpIcon className="size-4"/>)
+              }
+                
             </Button>
           </div>
         </form>
