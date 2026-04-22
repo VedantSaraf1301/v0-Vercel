@@ -38,7 +38,7 @@ const FileBreadcrumb = ({ filePath }) => {
               {isLast ? (
                 <BreadcrumbPage>{segment}</BreadcrumbPage>
               ) : (
-                <span className="text-muted-foreground+">{segment}</span>
+                <span className="text-muted-foreground">{segment}</span>
               )}
             </BreadcrumbItem>
             {!isLast && <BreadcrumbSeparator />}

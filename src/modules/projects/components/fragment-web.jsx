@@ -39,7 +39,7 @@ const FragmentWeb = ({ data }) => {
             disabled={!data.sandboxUrl || copied}
             className={"flex-1 justify-start text-start font-normal"}
           >
-            <Span className="truncate">{data.sandboxUrl}</Span>
+            <span className="truncate">{data.sandboxUrl}</span>
           </Button>
         </Hint>
 

@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge"
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -14,11 +14,7 @@ export function cn(...inputs) {
  * Input: { "src/Button.tsx": "...", "README.md": "..." }
  * Output: [["src", "Button.tsx"], "README.md"]
  */
-export function convertFilesToTreeItems(
-  files
-) {
-  
-
+export function convertFilesToTreeItems(files) {
   // Build a tree structure first
   const tree = {};
   // Sort files to ensure consistent ordering
@@ -43,27 +39,16 @@ export function convertFilesToTreeItems(
   }
 
   // Convert tree structure to TreeItem format
-  function convertNode(node, name) {
-    const entries = Object.entries(node);
-
-    if (entries.length === 0) {
-      return name || "";
-    }
-
+  function convertNode(node) {
     const children = [];
 
-    for (const [key, value] of entries) {
+    for (const [key, value] of Object.entries(node)) {
       if (value === null) {
-        // It's a file
+        // File → just a string
         children.push(key);
       } else {
-        // It's a folder
-        const subTree = convertNode(value, key);
-        if (Array.isArray(subTree)) {
-          children.push([key, ...subTree]);
-        } else {
-          children.push([key, subTree]);
-        }
+        // Folder → [folderName, ...children]
+        children.push([key, ...convertNode(value)]);
       }
     }
 
