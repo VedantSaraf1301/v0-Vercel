@@ -4,6 +4,7 @@ import { MessageRole,MessageType } from "@prisma/client"
 import db from "@/lib/db"
 import { inngest } from "@/inngest/client"
 import { getCurrentUser } from "@/modules/authentication/actions"
+import { consumeCredits } from "@/lib/usage"
 
 
 
@@ -20,6 +21,23 @@ export const createMessage = async(value,projectId) => {
     })
 
     if(!project) throw new Error("Project not found!!!")
+
+    //This logic is to support rate limiting
+    try {
+      await consumeCredits();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error({
+          code: "BAD_REQUEST",
+          message: "Something went wrong",
+        });
+      } else {
+        throw new Error({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many requests",
+        });
+      }
+    }
 
     const newMessage = await db.message.create({
         data:{
