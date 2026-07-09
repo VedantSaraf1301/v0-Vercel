@@ -1,7 +1,6 @@
 "use client"
 import React from 'react'
 import { useGetProjects } from '@/modules/projects/hooks/project'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Carousel,
@@ -10,20 +9,12 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { FolderKanban, Calendar, ArrowRight } from "lucide-react";
-import Image from "next/image";
+import { FolderKanban } from "lucide-react";
 import Link from 'next/link';
+import ProjectCard from './project-card';
 const ProjectList = () => {
-    
-    const {data:projects,isPending} = useGetProjects()
 
-    const formatDate = (date) => {
-      return new Date(date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    };
+    const {data:projects,isPending} = useGetProjects()
 
     if (isPending) {
       return (
@@ -41,7 +32,17 @@ const ProjectList = () => {
     }
   
     if(!projects || projects.length===0){
-        return null
+        return (
+          <div className="w-full mt-16 flex flex-col items-center gap-3 text-center">
+            <div className="p-4 rounded-full bg-emerald-500/10">
+              <FolderKanban className="w-8 h-8 text-emerald-500" />
+            </div>
+            <h2 className="text-xl font-semibold">No projects yet</h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Describe what you want to build above and we&apos;ll create your first project.
+            </p>
+          </div>
+        )
     }
 
 
@@ -54,28 +55,7 @@ const ProjectList = () => {
         <div className="hidden lg:grid grid-cols-3 gap-4 max-w-6xl mx-auto">
           {projects.map((project) => (
             <Link href={`/projects/${project.id}`} key={project.id}>
-              <Card
-                key={project.id}
-                className="group hover:shadow-xl transition-all duration-300 border-zinc-800/50 hover:border-emerald-500/50 cursor-pointer bg-zinc-900/30 backdrop-blur-sm overflow-hidden"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2.5 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                      <FolderKanban className="w-5 h-5 text-emerald-500" />
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
-                  </div>
-                  <CardTitle className="text-lg text-zinc-100 group-hover:text-emerald-400 transition-colors line-clamp-1">
-                    {project.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center text-sm text-zinc-400">
-                    <Calendar className="w-3.5 h-3.5 mr-2" />
-                    <span>{formatDate(project.createdAt)}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <ProjectCard project={project} />
             </Link>
           ))}
         </div>
@@ -90,29 +70,11 @@ const ProjectList = () => {
           >
             <CarouselContent className="-ml-4">
               {projects.map((project) => (
-                <Link href={`/projects/${project.id}`} key={project.id}>
-                  <CarouselItem key={project.id} className="pl-4 md:basis-1/2">
-                    <Card className="group hover:shadow-xl transition-all duration-300 border-zinc-800/50 hover:border-emerald-500/50 cursor-pointer bg-zinc-900/30 backdrop-blur-sm">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="p-2.5 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                            <FolderKanban className="w-5 h-5 text-emerald-500" />
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
-                        </div>
-                        <CardTitle className="text-lg text-zinc-100 group-hover:text-emerald-400 transition-colors line-clamp-1">
-                          {project.name}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center text-sm text-zinc-400">
-                          <Calendar className="w-3.5 h-3.5 mr-2" />
-                          <span>{formatDate(project.createdAt)}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CarouselItem>
-                </Link>
+                <CarouselItem key={project.id} className="pl-4 md:basis-1/2">
+                  <Link href={`/projects/${project.id}`}>
+                    <ProjectCard project={project} />
+                  </Link>
+                </CarouselItem>
               ))}
             </CarouselContent>
             <CarouselPrevious className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100" />

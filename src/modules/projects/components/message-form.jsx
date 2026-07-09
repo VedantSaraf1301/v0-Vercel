@@ -53,6 +53,8 @@ const MessageForm = ({ projectId }) => {
     }
   };
 
+  const contentLength = form.watch("content")?.length ?? 0;
+
   return (
     <Form {...form}>
       {
@@ -100,16 +102,26 @@ const MessageForm = ({ projectId }) => {
             </kbd>
             &nbsp; to submit
           </div>
-          <Button
-            className={cn(
-              "size-8 rounded-full",
-              isPending && "bg-muted-foreground border",
-            )}
-            disabled={isPending}
-            type="submit"
-          >
-            {isPending ? <Spinner /> : <ArrowUpIcon className="size-4" />}
-          </Button>
+          <div className="flex items-center gap-x-2">
+            <span
+              className={cn(
+                "text-[10px] text-muted-foreground font-mono tabular-nums",
+                contentLength > 1000 && "text-destructive"
+              )}
+            >
+              {contentLength}/1000
+            </span>
+            <Button
+              className={cn(
+                "size-8 rounded-full",
+                isPending && "bg-muted-foreground border",
+              )}
+              disabled={isPending}
+              type="submit"
+            >
+              {isPending ? <Spinner /> : <ArrowUpIcon className="size-4" />}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

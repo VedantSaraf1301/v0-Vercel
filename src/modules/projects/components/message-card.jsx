@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/card';
+import { Markdown } from '@/components/markdown';
 import { cn } from '@/lib/utils';
 import { MessageRole, MessageType } from '@prisma/client';
 import { format } from 'date-fns';
@@ -71,13 +72,13 @@ const AssistantMessage = ({
           width={30}
           className="invert dark:invert-0"
         />
-        <span className="text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+        <span className="text-xs text-muted-foreground">
           {format(new Date(createdAt), "HH:mm 'on' MMM dd, yyyy")}
         </span>
       </div>
 
       <div className="pl-8.5 flex flex-col gap-y-4">
-        <span>{content}</span>
+        <Markdown>{content}</Markdown>
         {fragment && type === MessageType.RESULT && (
           <FragmentCard
             fragment={fragment}

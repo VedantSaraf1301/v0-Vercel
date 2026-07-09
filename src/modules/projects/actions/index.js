@@ -88,3 +88,50 @@ export const getProjectById = async (projectId) => {
 
   return project;
 };
+
+export const renameProject = async (projectId, name) => {
+  const user = await getCurrentUser();
+
+  if (!user || !user.id) throw new Error("Unauthorised");
+
+  const trimmedName = name?.trim();
+
+  if (!trimmedName) {
+    throw new Error("Project name cannot be empty");
+  }
+
+  const project = await db.project.findUnique({
+    where: {
+      id: projectId,
+      userId: user.id,
+    },
+  });
+
+  if (!project) {
+    throw new Error("Project not Found");
+  }
+
+  return db.project.update({
+    where: { id: projectId },
+    data: { name: trimmedName },
+  });
+};
+
+export const deleteProject = async (projectId) => {
+  const user = await getCurrentUser();
+
+  if (!user || !user.id) throw new Error("Unauthorised");
+
+  const project = await db.project.findUnique({
+    where: {
+      id: projectId,
+      userId: user.id,
+    },
+  });
+
+  if (!project) {
+    throw new Error("Project not Found");
+  }
+
+  await db.project.delete({ where: { id: projectId } });
+};

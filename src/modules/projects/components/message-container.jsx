@@ -1,17 +1,62 @@
 import React,{useEffect,useRef} from 'react'
-import {useGetMessages,preFetchMessages} from "@/modules/messages/hooks/message"
+import Image from 'next/image'
+import { toast } from 'sonner'
+import {useGetMessages,preFetchMessages,useIsGenerating,useCreateMessages} from "@/modules/messages/hooks/message"
 import { useQueryClient } from '@tanstack/react-query'
 import { Spinner } from '@/components/ui/spinner'
+import { Button } from '@/components/ui/button'
 import MessageCard from './message-card'
 import MessageForm from './message-form'
 import { MessageRole } from '@prisma/client'
 import MessageLoader from './message-loader'
+
+const StalledNotice = ({ projectId, content }) => {
+  const { mutateAsync, isPending } = useCreateMessages(projectId)
+
+  const handleRetry = async () => {
+    try {
+      await mutateAsync(content)
+    } catch (error) {
+      toast.error(error.message || "Failed to retry")
+    }
+  }
+
+  return (
+    <div className="flex flex-col group px-2 pb-4">
+      <div className="flex items-center gap-2 pl-2 mb-2">
+        <Image
+          alt="Vibe"
+          src={"/v0-logo-dark.svg"}
+          height={28}
+          width={28}
+          className="shrink-0 invert dark:invert-0"
+        />
+      </div>
+      <div className="pl-8.5 flex flex-col gap-y-2">
+        <p className="text-sm text-muted-foreground">
+          This is taking longer than expected. The generation may have been cancelled or failed silently.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-fit"
+          onClick={handleRetry}
+          disabled={isPending}
+        >
+          {isPending ? <Spinner /> : "Try again"}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
   const queryClient = useQueryClient()
   const bottomRef = useRef(null);
   const lastAssistantMessageIdRef = useRef(null);
 
   const {data:messages,isPending,isError,error} = useGetMessages(projectId)
+  const { isGenerating, isStalled, lastMessage } = useIsGenerating(messages)
 
   useEffect(()=>{
     if(projectId){
@@ -68,9 +113,6 @@ const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
     );
   }
 
-  const lastMessage = messages[messages.length - 1]
-  const isLastMessageUser = lastMessage.role === MessageRole.USER
-
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -86,7 +128,10 @@ const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
             type={message.type}
           />
         ))}
-        {isLastMessageUser && <MessageLoader/>}
+        {isGenerating && !isStalled && <MessageLoader/>}
+        {isStalled && (
+          <StalledNotice projectId={projectId} content={lastMessage.content} />
+        )}
         <div ref={bottomRef}/>
       </div>
 

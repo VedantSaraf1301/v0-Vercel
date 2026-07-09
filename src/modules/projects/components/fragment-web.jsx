@@ -2,9 +2,14 @@ import React, { useState } from "react";
 import { ExternalLink, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
+import { Spinner } from "@/components/ui/spinner";
 const FragmentWeb = ({ data }) => {
   const [fragmentKey, setFragmentKey] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [loadedKey, setLoadedKey] = useState(null);
+
+  const currentKey = `${fragmentKey}:${data.sandboxUrl}`;
+  const isLoading = loadedKey !== currentKey;
 
   const onRefresh = () => {
     setFragmentKey((prev) => prev + 1);
@@ -58,13 +63,22 @@ const FragmentWeb = ({ data }) => {
         </Hint>
       </div>
 
-      <iframe
-        key={fragmentKey}
-        className="h-full w-full"
-        sandbox="allow-scripts allow-same-origin "
-        loading="lazy"
-        src={data.sandboxUrl}
-      />
+      <div className="relative flex-1">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background text-muted-foreground">
+            <Spinner />
+            <span className="text-sm">Loading preview...</span>
+          </div>
+        )}
+        <iframe
+          key={fragmentKey}
+          className="h-full w-full"
+          sandbox="allow-scripts allow-same-origin "
+          loading="lazy"
+          src={data.sandboxUrl}
+          onLoad={() => setLoadedKey(currentKey)}
+        />
+      </div>
     </div>
   );
 };

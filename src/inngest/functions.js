@@ -17,8 +17,44 @@ import {
 import db from "@/lib/db";
 import { MessageRole, MessageType } from "@prisma/client";
 
+const getAgentFailureMessage = (error) => {
+  const text = `${error?.message || error}`.toLowerCase();
+
+  if (
+    text.includes("429") ||
+    text.includes("resource_exhausted") ||
+    text.includes("quota") ||
+    text.includes("rate limit")
+  ) {
+    return "The AI model has hit its usage limit. Please wait a bit and try again.";
+  }
+
+  if (text.includes("404") || text.includes("not_found")) {
+    return "The AI model is temporarily unavailable. Please try again shortly.";
+  }
+
+  return "Something went wrong while generating your app. Please try again.";
+};
+
 export const codeAgentFunction = inngest.createFunction(
-  { id: "code-agent" ,triggers:{ event: "code-agent/run" } },
+  {
+    id: "code-agent",
+    triggers: { event: "code-agent/run" },
+    onFailure: async ({ event, error }) => {
+      const projectId = event.data.event.data.projectId;
+
+      if (!projectId) return;
+
+      await db.message.create({
+        data: {
+          projectId,
+          content: getAgentFailureMessage(error),
+          role: MessageRole.ASSISTANT,
+          type: MessageType.ERROR,
+        },
+      });
+    },
+  },
 
   async ({ event, step }) => {
     // Step-1
