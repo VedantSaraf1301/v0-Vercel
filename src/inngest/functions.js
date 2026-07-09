@@ -9,7 +9,11 @@ import {
 import Sandbox from "e2b";
 import z from "zod";
 import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT } from "@/prompt";
-import { lastAssistantTextMessageContent } from "./utils";
+import {
+  getSandbox,
+  lastAssistantTextMessageContent,
+  SANDBOX_TIMEOUT_MS,
+} from "./utils";
 import db from "@/lib/db";
 import { MessageRole, MessageType } from "@prisma/client";
 
@@ -19,10 +23,33 @@ export const codeAgentFunction = inngest.createFunction(
   async ({ event, step }) => {
     // Step-1
     const sandboxId = await step.run("get-sandbox-id", async () => {
-      const sandbox = await Sandbox.create("v0-nextjs-build-new");
+      const project = await db.project.findUnique({
+        where: { id: event.data.projectId },
+        select: { sandboxId: true },
+      });
+
+      if (project?.sandboxId) {
+        try {
+          const sandbox = await getSandbox(project.sandboxId);
+          return sandbox.sandboxId;
+        } catch (error) {
+          // Previous sandbox expired or was removed - fall through and create a new one
+        }
+      }
+
+      const sandbox = await Sandbox.create("v0-nextjs-build-new", {
+        timeoutMs: SANDBOX_TIMEOUT_MS,
+      });
+
+      await db.project.update({
+        where: { id: event.data.projectId },
+        data: { sandboxId: sandbox.sandboxId },
+      });
+
       return sandbox.sandboxId;
     });
 
+    //Implementing agent memory
     const previousMessages = await step.run(
       "get-previous-messages",
       async()=>{
@@ -53,11 +80,11 @@ export const codeAgentFunction = inngest.createFunction(
       summary:"",
       files:{}
     }
-  ,
-  {
-    messages:previousMessages
-  }
-)
+    ,
+    {
+      messages:previousMessages
+    }
+    )
 
     const codeAgent = createAgent({
       name: "code-agent",
@@ -77,7 +104,7 @@ export const codeAgentFunction = inngest.createFunction(
               const buffers = { stdout: "", stderr: "" };
 
               try {
-                const sandbox = await Sandbox.connect(sandboxId);
+                const sandbox = await getSandbox(sandboxId);
 
                 const result = await sandbox.commands.run(command, {
                   onStdout: (data) => {
@@ -121,7 +148,7 @@ export const codeAgentFunction = inngest.createFunction(
                 try {
                   const updatedFiles = network?.state?.data.files || {};
 
-                  const sanbox = await Sandbox.connect(sandboxId);
+                  const sanbox = await getSandbox(sandboxId);
 
                   for (const file of files) {
                     await sanbox.files.write(file.path, file.content);
@@ -151,7 +178,7 @@ export const codeAgentFunction = inngest.createFunction(
           handler: async ({ files }, { step }) => {
             return await step?.run("readFiles", async () => {
               try {
-                const sanbox = await Sandbox.connect(sandboxId);
+                const sanbox = await getSandbox(sandboxId);
 
                 const contents = [];
 
@@ -253,7 +280,7 @@ export const codeAgentFunction = inngest.createFunction(
       Object.keys(result.state.data.files || {}).length === 0;
 
     const sandboxUrl = await step.run("get-sandbox-url", async () => {
-      const sandbox = await Sandbox.connect(sandboxId);
+      const sandbox = await getSandbox(sandboxId);
       const host = sandbox.getHost(3000);
 
       return `http://${host}`;

@@ -24,10 +24,10 @@ const ProjectView = ({ projectId }) => {
 
   return (
     <div className="h-screen">
-      <ResizablePanelGroup direction="horizontal">
+      <ResizablePanelGroup orientation="horizontal">
         <ResizablePanel
-          defaultSize={35}
-          minSize={20}
+          defaultSize="35%"
+          minSize="20%"
           className="flex flex-col min-h-0"
         >
           <ProjectHeader projectId={projectId} />
@@ -39,7 +39,7 @@ const ProjectView = ({ projectId }) => {
           />
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={65} minSize={50}>
+        <ResizablePanel defaultSize="65%" minSize="50%">
           <Tabs
             className={"h-full flex flex-col"}
             defaultValue="preview"

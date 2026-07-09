@@ -129,11 +129,11 @@ const FileExplorer = ({files}) => {
     }, [selectedFile, files]);
 
     return (
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+      <ResizablePanelGroup orientation="horizontal" className="h-full">
         <ResizablePanel
-          defaultSize={25}
-          minSize={20}
-          maxSize={40}
+          defaultSize="25%"
+          minSize="20%"
+          maxSize="40%"
           className="bg-sidebar"
         >
           <div className="h-full overflow-auto">
@@ -147,7 +147,7 @@ const FileExplorer = ({files}) => {
 
         <ResizableHandle className="w-1.5 hover:bg-primary/20 transition-colors" />
 
-        <ResizablePanel defaultSize={75} minSize={40}>
+        <ResizablePanel defaultSize="75%" minSize="40%">
           {selectedFile && files[selectedFile] ? (
             <div className="h-full w-full flex flex-col">
             <div className="border-b bg-sidebar/50 px-4 py-2 flex justify-between items-center gap-x-2">
