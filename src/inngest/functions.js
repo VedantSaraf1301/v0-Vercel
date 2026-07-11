@@ -17,6 +17,17 @@ import {
 import db from "@/lib/db";
 import { MessageRole, MessageType } from "@prisma/client";
 
+// Best-effort progress log for the live activity feed - must never break a run
+const recordProgress = async (projectId, content) => {
+  try {
+    await db.generationStep.create({
+      data: { projectId, content },
+    });
+  } catch (error) {
+    console.log("Failed to record progress step:", error);
+  }
+};
+
 const getAgentFailureMessage = (error) => {
   const text = `${error?.message || error}`.toLowerCase();
 
@@ -40,6 +51,9 @@ export const codeAgentFunction = inngest.createFunction(
   {
     id: "code-agent",
     triggers: { event: "code-agent/run" },
+    // One run at a time per project - overlapping runs would share a sandbox,
+    // race on file writes, and wipe each other's activity feed
+    concurrency: [{ key: "event.data.projectId", limit: 1 }],
     onFailure: async ({ event, error }) => {
       const projectId = event.data.event.data.projectId;
 
@@ -57,8 +71,14 @@ export const codeAgentFunction = inngest.createFunction(
   },
 
   async ({ event, step }) => {
+    const projectId = event.data.projectId;
+
     // Step-1
     const sandboxId = await step.run("get-sandbox-id", async () => {
+      // Fresh run - clear the previous run's activity feed
+      await db.generationStep.deleteMany({ where: { projectId } });
+      await recordProgress(projectId, "Starting up the sandbox...");
+
       const project = await db.project.findUnique({
         where: { id: event.data.projectId },
         select: { sandboxId: true },
@@ -83,6 +103,10 @@ export const codeAgentFunction = inngest.createFunction(
       });
 
       return sandbox.sandboxId;
+    });
+
+    await step.run("progress-sandbox-ready", async () => {
+      await recordProgress(projectId, "Sandbox ready. Reading your request...");
     });
 
     //Implementing agent memory
@@ -139,6 +163,8 @@ export const codeAgentFunction = inngest.createFunction(
             return await step?.run("terminal", async () => {
               const buffers = { stdout: "", stderr: "" };
 
+              await recordProgress(projectId, `Running: ${command.slice(0, 120)}`);
+
               try {
                 const sandbox = await getSandbox(sandboxId);
 
@@ -181,6 +207,12 @@ export const codeAgentFunction = inngest.createFunction(
             const newFiles = await step?.run(
               "createOrUpdateFiles",
               async () => {
+                const fileNames = files.map((f) => f.path).join(", ");
+                await recordProgress(
+                  projectId,
+                  `Writing ${files.length} file${files.length === 1 ? "" : "s"}: ${fileNames.slice(0, 150)}`
+                );
+
                 try {
                   const updatedFiles = network?.state?.data.files || {};
 
@@ -213,6 +245,11 @@ export const codeAgentFunction = inngest.createFunction(
           }),
           handler: async ({ files }, { step }) => {
             return await step?.run("readFiles", async () => {
+              await recordProgress(
+                projectId,
+                `Reading ${files.length} file${files.length === 1 ? "" : "s"}...`
+              );
+
               try {
                 const sanbox = await getSandbox(sandboxId);
 
@@ -263,7 +300,83 @@ export const codeAgentFunction = inngest.createFunction(
       },
     });
 
-    const result = await network.run(event.data.value , {state});
+    let result = await network.run(event.data.value , {state});
+
+    // Self-healing loop: verify the generated app actually renders inside the
+    // sandbox, and if it doesn't, feed the real error back to the agent for a
+    // repair pass before saving anything.
+    const MAX_REPAIR_ATTEMPTS = 1;
+
+    for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+      const hasFiles =
+        Object.keys(result.state.data.files || {}).length > 0;
+
+      if (!hasFiles) break;
+
+      const check = await step.run(`verify-app-${attempt}`, async () => {
+        await recordProgress(projectId, "Verifying the app renders correctly...");
+
+        try {
+          const sandbox = await getSandbox(sandboxId);
+
+          // Retry while the dev server is still booting: curl reports "000"
+          // for connection-refused, which is "not ready", not "broken"
+          const status = await sandbox.commands.run(
+            'for i in $(seq 1 10); do code=$(curl -s -o /tmp/verify.html -w "%{http_code}" --max-time 15 http://localhost:3000); if [ "$code" != "000" ]; then break; fi; sleep 3; done; echo "$code"'
+          );
+          const statusCode = status.stdout.trim().split("\n").pop().trim();
+
+          if (statusCode === "200") {
+            await recordProgress(projectId, "App verified - it renders successfully.");
+            return { ok: true };
+          }
+
+          if (statusCode === "000") {
+            // Server never became reachable - we cannot tell good from broken,
+            // so skip verification instead of feeding the agent an empty error
+            await recordProgress(
+              projectId,
+              "Could not reach the app to verify it - skipping verification."
+            );
+            return { ok: true };
+          }
+
+          const body = await sandbox.commands.run(
+            "head -c 3000 /tmp/verify.html"
+          );
+
+          await recordProgress(
+            projectId,
+            `App returned HTTP ${statusCode} - sending the error back to the agent to fix...`
+          );
+
+          return { ok: false, statusCode, error: body.stdout };
+        } catch (error) {
+          // If verification itself breaks (curl missing, sandbox hiccup),
+          // fail open rather than blocking an otherwise good generation
+          return { ok: true };
+        }
+      });
+
+      if (check.ok) break;
+      if (attempt === MAX_REPAIR_ATTEMPTS) break;
+
+      // Clear the summary so the network router routes back to the code agent,
+      // but keep the original: if the repair run never emits a new
+      // <task_summary>, restoring it prevents a working app from being
+      // saved as an error just because the summary went missing
+      const previousSummary = result.state.data.summary;
+      result.state.data.summary = "";
+
+      result = await network.run(
+        `The app you just generated fails to render: loading http://localhost:3000 returns HTTP ${check.statusCode}. Fix the error so the page renders correctly. Here is the server's error output:\n\n${check.error}`,
+        { state: result.state }
+      );
+
+      if (!result.state.data.summary) {
+        result.state.data.summary = previousSummary;
+      }
+    }
 
     const fragmentTitleGenerator = createAgent({
       name:"fragment-title-generator",
@@ -323,6 +436,8 @@ export const codeAgentFunction = inngest.createFunction(
     });
 
     await step.run("save-result", async () => {
+      await recordProgress(projectId, "Finalizing and saving your app...");
+
       if (isError) {
         return await db.message.create({
           data: {

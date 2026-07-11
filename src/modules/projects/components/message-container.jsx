@@ -53,10 +53,11 @@ const StalledNotice = ({ projectId, content }) => {
 const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
   const queryClient = useQueryClient()
   const bottomRef = useRef(null);
+  const scrollContainerRef = useRef(null);
   const lastAssistantMessageIdRef = useRef(null);
 
   const {data:messages,isPending,isError,error} = useGetMessages(projectId)
-  const { isGenerating, isStalled, lastMessage } = useIsGenerating(messages)
+  const { isGenerating, isStalled, lastMessage, steps } = useIsGenerating(projectId, messages)
 
   useEffect(()=>{
     if(projectId){
@@ -80,6 +81,18 @@ const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
   useEffect(()=>{
     bottomRef.current?.scrollIntoView({behavior:"smooth"})
   },[messages?.length])
+
+  // Follow the activity feed only if the user is already near the bottom -
+  // never yank them down while they're reading earlier messages
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (nearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [steps?.length]);
 
 
   if (isPending) {
@@ -115,7 +128,7 @@ const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto">
         {messages.map((message) => (
           <MessageCard
             key={message.id}
@@ -128,7 +141,7 @@ const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
             type={message.type}
           />
         ))}
-        {isGenerating && !isStalled && <MessageLoader/>}
+        {isGenerating && !isStalled && <MessageLoader steps={steps}/>}
         {isStalled && (
           <StalledNotice projectId={projectId} content={lastMessage.content} />
         )}
@@ -137,7 +150,7 @@ const MessageContainer = ({projectId,activeFragment,setActiveFragment}) => {
 
        <div className="relative p-2 pt-1">
            <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-b from-transparent to-background pointer-events-none" />
-           <MessageForm projectId={projectId}/>
+           <MessageForm projectId={projectId} disabled={isGenerating && !isStalled}/>
       </div>
 
     </div>

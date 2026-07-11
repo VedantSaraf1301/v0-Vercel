@@ -26,10 +26,12 @@ const formSchema = z.object({
     .max(1000, "Description is too long"),
 });
 
-const MessageForm = ({ projectId }) => {
+const MessageForm = ({ projectId, disabled = false }) => {
   const [isFocused, setIsFocused] = useState(false);
 
   const { mutateAsync, isPending } = useCreateMessages(projectId);
+
+  const isBusy = isPending || disabled;
 
   const {data:usage} = useStatus()
 
@@ -75,18 +77,18 @@ const MessageForm = ({ projectId }) => {
           render={({ field }) => (
             <TextAreaAutosize
               {...field}
-              disabled={isPending}
-              placeholder="Create anything"
+              disabled={isBusy}
+              placeholder={disabled ? "Generating... please wait" : "Create anything"}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               minRows={3}
               maxRows={8}
               className={cn(
                 "pt-4 resize-none border-none w-full outline-none bg-transparent",
-                isPending && "opacity-50"
+                isBusy && "opacity-50"
               )}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   form.handleSubmit(onSubmit)(e);
                 }
@@ -98,9 +100,13 @@ const MessageForm = ({ projectId }) => {
         <div className="flex gap-x-2 items-end justify-between pt-2">
           <div className="text-[10px] text-muted-foreground font-mono">
             <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              <span>&#8984;</span>Enter
+              Enter
             </kbd>
-            &nbsp; to submit
+            &nbsp; to submit, &nbsp;
+            <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              Shift + Enter
+            </kbd>
+            &nbsp; for new line
           </div>
           <div className="flex items-center gap-x-2">
             <span
@@ -114,12 +120,12 @@ const MessageForm = ({ projectId }) => {
             <Button
               className={cn(
                 "size-8 rounded-full",
-                isPending && "bg-muted-foreground border",
+                isBusy && "bg-muted-foreground border",
               )}
-              disabled={isPending}
+              disabled={isBusy}
               type="submit"
             >
-              {isPending ? <Spinner /> : <ArrowUpIcon className="size-4" />}
+              {isBusy ? <Spinner /> : <ArrowUpIcon className="size-4" />}
             </Button>
           </div>
         </div>

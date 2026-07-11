@@ -56,7 +56,7 @@ export const createProject = async (value) => {
 export const getProjects = async () => {
   const user = await getCurrentUser();
 
-  if (!user) {
+  if (!user || !user.id) {
     throw new Error("Unauthorised");
   }
 
@@ -75,6 +75,8 @@ export const getProjects = async () => {
 export const getProjectById = async (projectId) => {
   const user = await getCurrentUser();
 
+  if (!user || !user.id) throw new Error("Unauthorised");
+
   const project = await db.project.findUnique({
     where: {
       id: projectId,
@@ -87,6 +89,25 @@ export const getProjectById = async (projectId) => {
   }
 
   return project;
+};
+
+export const getGenerationSteps = async (projectId) => {
+  const user = await getCurrentUser();
+
+  if (!user || !user.id) throw new Error("Unauthorised");
+
+  // Ownership enforced through the relation - one query instead of two,
+  // bounded to the newest rows since the UI only shows the tail of the feed
+  const steps = await db.generationStep.findMany({
+    where: {
+      projectId,
+      project: { userId: user.id },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 25,
+  });
+
+  return steps.reverse();
 };
 
 export const renameProject = async (projectId, name) => {

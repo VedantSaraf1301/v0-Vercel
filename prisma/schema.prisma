@@ -48,6 +48,19 @@ model Project{
   sandboxId String?
 
   messages Message[]
+  generationSteps GenerationStep[]
+}
+
+model GenerationStep {
+  id String @id @default(cuid())
+  projectId String
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  content String
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
 }
 
 model Message{

@@ -58,10 +58,7 @@ export const getCurrentUser = async () => {
   try {
     const user = await getClerkUser();
     if (!user) {
-      return {
-        success: false,
-        error: "No User found!!!",
-      };
+      return null;
     }
 
     const currentUser = await db.user.findUnique({
@@ -80,9 +77,6 @@ export const getCurrentUser = async () => {
     return currentUser;
   } catch (error) {
     console.error("Error : ", error);
-    return {
-      success: false,
-      error: "Failed to Find User",
-    };
+    return null;
   }
 };

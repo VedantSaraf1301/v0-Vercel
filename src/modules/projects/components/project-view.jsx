@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
 import React from "react";
 import ProjectHeader from "./project-header";
 import MessageContainer from "./message-container";
@@ -70,7 +69,7 @@ const ProjectWorkspace = ({ projectId, layoutTabState, setLayoutTabState, isMobi
   const [tabState, setTabState] = useState("preview");
 
   const { data: messages } = useGetMessages(projectId);
-  const { isGenerating, isStalled } = useIsGenerating(messages);
+  const { isGenerating, isStalled } = useIsGenerating(projectId, messages);
 
   const preview = activeFragment ? (
     <FragmentWeb data={activeFragment} />
