@@ -1,7 +1,7 @@
 "use client"
 import React from 'react'
 import { useGetProjects } from '@/modules/projects/hooks/project'
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Carousel,
   CarouselContent,
@@ -18,15 +18,8 @@ const ProjectList = () => {
 
     if (isPending) {
       return (
-        <div className="w-full mt-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
-            Your Projects
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-36 rounded-xl" />
-            ))}
-          </div>
+        <div className="w-full mt-16 flex items-center justify-center">
+          <Spinner className="text-emerald-400" />
         </div>
       );
     }

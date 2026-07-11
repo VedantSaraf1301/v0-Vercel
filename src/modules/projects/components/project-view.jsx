@@ -23,7 +23,7 @@ const StalledNotice = () => (
   <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-8 text-center">
     <p className="text-sm text-muted-foreground max-w-sm">
       This is taking longer than expected. The generation may have been
-      cancelled or failed silently — try sending your message again from the chat.
+      cancelled or failed silently, try sending your message again from the chat.
     </p>
   </div>
 );

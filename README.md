@@ -1,14 +1,14 @@
 # v0 Engine
 
-A full-stack AI-powered UI generation platform inspired by [v0.dev](https://v0.dev). Type a prompt, get a live-rendered React component — built with a production-grade background job architecture using Inngest and isolated code execution via E2B sandboxes.
+A full-stack AI-powered UI generation platform inspired by [v0.dev](https://v0.dev). Type a prompt, get a live-rendered React component - built with a production-grade background job architecture using Inngest and isolated code execution via E2B sandboxes.
 
 ---
 
 ## What it does
 
-The user types a natural language prompt (e.g. *"a dashboard with a sales chart and a user table"*). The app sends that prompt to **Google Gemini**, which generates React + Tailwind component code. That code is executed inside an isolated E2B cloud sandbox and the rendered output is streamed back — giving the user a **live preview and the source code side by side**, just like v0.dev.
+The user types a natural language prompt (e.g. *"a dashboard with a sales chart and a user table"*). The app sends that prompt to **Google Gemini**, which generates React + Tailwind component code. That code is executed inside an isolated E2B cloud sandbox and the rendered output is streamed back - giving the user a **live preview and the source code side by side**, just like v0.dev.
 
-All generation work is handled asynchronously via **Inngest** background jobs, so the HTTP request returns immediately and the UI updates in real time as the job progresses. Users can browse, revisit, and iterate on past generations — all persisted in the database.
+All generation work is handled asynchronously via **Inngest** background jobs, so the HTTP request returns immediately and the UI updates in real time as the job progresses. Users can browse, revisit, and iterate on past generations - all persisted in the database.
 
 ---
 
@@ -37,7 +37,7 @@ TanStack Query polls / receives update → UI re-renders
 ```
 
 **Why Inngest instead of a plain API route?**
-AI generation can take 10–30 seconds. Handling it synchronously inside a serverless function risks timeout, gives no retry logic on failure, and blocks the client. Inngest decouples the trigger from the execution — the job runs reliably in the background with automatic retries, observable run history, and zero polling complexity on the server side.
+AI generation can take 10–30 seconds. Handling it synchronously inside a serverless function risks timeout, gives no retry logic on failure, and blocks the client. Inngest decouples the trigger from the execution - the job runs reliably in the background with automatic retries, observable run history, and zero polling complexity on the server side.
 
 **Why E2B for code execution?**
 Generated code is untrusted by definition. Running it directly on the server would be a critical security vulnerability. E2B spins up an isolated micro-VM per execution, meaning malicious or broken code cannot affect the host environment. The sandbox is destroyed after each run.
@@ -113,13 +113,13 @@ npx prisma generate
 
 ### 4. Run the development server
 
-You need two processes running simultaneously — the Next.js app and the Inngest dev server.
+You need two processes running simultaneously - the Next.js app and the Inngest dev server.
 
 ```bash
-# Terminal 1 — Next.js
+# Terminal 1 - Next.js
 npm run dev
 
-# Terminal 2 — Inngest dev server (to receive background job events locally)
+# Terminal 2 - Inngest dev server (to receive background job events locally)
 npx inngest-cli@latest dev
 ```
 
@@ -152,11 +152,11 @@ sandbox-templates/
 
 ## Key design decisions
 
-**Sandbox template** — Rather than using a generic E2B sandbox, the project defines a custom `sandbox-templates/next-js` template pre-configured with the right Node version, dependencies, and file structure. This reduces cold start time and avoids dependency installation on every generation run.
+**Sandbox template** - Rather than using a generic E2B sandbox, the project defines a custom `sandbox-templates/next-js` template pre-configured with the right Node version, dependencies, and file structure. This reduces cold start time and avoids dependency installation on every generation run.
 
-**Rate limiting** — `rate-limiter-flexible` sits in front of the generation endpoint, preventing abuse without requiring a paid external service.
+**Rate limiting** - `rate-limiter-flexible` sits in front of the generation endpoint, preventing abuse without requiring a paid external service.
 
-**Slug-based project IDs** — Projects use human-readable slugs generated via `random-word-slugs` rather than raw UUIDs, making URLs shareable and debuggable.
+**Slug-based project IDs** - Projects use human-readable slugs generated via `random-word-slugs` rather than raw UUIDs, making URLs shareable and debuggable.
 
 ---
 
