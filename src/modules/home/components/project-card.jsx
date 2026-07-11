@@ -1,5 +1,6 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,22 @@ const ProjectCard = ({ project }) => {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [nameDraft, setNameDraft] = useState("")
 
+  // Radix closes the dropdown on pointerdown, before the paired click event
+  // fires. That click then lands on whatever is now under the cursor - the
+  // card itself - and Link would treat it as a navigation click. This flag,
+  // set on every menu interaction and checked in Link's own onClick, blocks
+  // that ghost click regardless of how it reaches the anchor.
+  const suppressNavRef = useRef(false)
+
+  const markMenuInteraction = () => {
+    suppressNavRef.current = true
+    // Safety net: if no ghost click ever arrives to consume this, don't let
+    // it block a genuine future navigation click on this card.
+    setTimeout(() => {
+      suppressNavRef.current = false
+    }, 300)
+  }
+
   const { mutateAsync: rename, isPending: isRenaming } = useRenameProject()
   const { mutateAsync: remove, isPending: isDeleting } = useDeleteProject()
 
@@ -79,6 +96,15 @@ const ProjectCard = ({ project }) => {
 
   return (
     <>
+      <Link
+        href={`/projects/${project.id}`}
+        onClick={(e) => {
+          if (suppressNavRef.current) {
+            e.preventDefault()
+            suppressNavRef.current = false
+          }
+        }}
+      >
       <Card className="group hover:shadow-xl transition-all duration-300 border-zinc-800/50 hover:border-emerald-500/50 cursor-pointer bg-zinc-900/30 backdrop-blur-sm overflow-hidden relative">
         <div className="absolute top-2 right-2 z-10">
           <DropdownMenu>
@@ -87,15 +113,19 @@ const ProjectCard = ({ project }) => {
                 variant="ghost"
                 size="icon"
                 className="size-7 text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800/80 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  markMenuInteraction()
+                }}
               >
                 <MoreVerticalIcon className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault()
+                  markMenuInteraction()
                   openRename()
                 }}
               >
@@ -106,6 +136,7 @@ const ProjectCard = ({ project }) => {
                 variant="destructive"
                 onSelect={(e) => {
                   e.preventDefault()
+                  markMenuInteraction()
                   setDeleteOpen(true)
                 }}
               >
@@ -137,6 +168,7 @@ const ProjectCard = ({ project }) => {
           </div>
         </CardContent>
       </Card>
+      </Link>
 
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent>

@@ -10,7 +10,6 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { FolderKanban } from "lucide-react";
-import Link from 'next/link';
 import ProjectCard from './project-card';
 const ProjectList = () => {
 
@@ -47,9 +46,7 @@ const ProjectList = () => {
 
         <div className="hidden lg:grid grid-cols-3 gap-4 max-w-6xl mx-auto">
           {projects.map((project) => (
-            <Link href={`/projects/${project.id}`} key={project.id}>
-              <ProjectCard project={project} />
-            </Link>
+            <ProjectCard key={project.id} project={project} />
           ))}
         </div>
 
@@ -64,9 +61,7 @@ const ProjectList = () => {
             <CarouselContent className="-ml-4">
               {projects.map((project) => (
                 <CarouselItem key={project.id} className="pl-4 md:basis-1/2">
-                  <Link href={`/projects/${project.id}`}>
-                    <ProjectCard project={project} />
-                  </Link>
+                  <ProjectCard project={project} />
                 </CarouselItem>
               ))}
             </CarouselContent>
